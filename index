@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>شفرة الأرقام</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap">
+<style>
+/* لوح تحكم عمودي: صندوق إدخال، مفتاح تبديل الاتجاه، صندوق نتيجة، ثم جدول المفتاح */
+:root{
+  --bg:#f2efe7;
+  --panel:#fbfaf6;
+  --ink:#241f1a;
+  --muted:#7a7066;
+  --line:#ddd6c8;
+  --accent:#8a5a2b;
+  --accent-soft:#f0e3d2;
+  --display:"Reem Kufi","Noto Kufi Arabic",system-ui,sans-serif;
+  --body:"IBM Plex Sans Arabic","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#191613;--panel:#221e1a;--ink:#f0eae1;--muted:#a79b8c;
+    --line:#39322b;--accent:#d9a066;--accent-soft:#33291f;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#191613;--panel:#221e1a;--ink:#f0eae1;--muted:#a79b8c;
+  --line:#39322b;--accent:#d9a066;--accent-soft:#33291f;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--body);
+  direction:rtl;padding-block:28px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+header{display:flex;flex-direction:column;gap:6px}
+h1{font-family:var(--display);font-size:2rem;margin:0;text-wrap:balance;letter-spacing:.5px}
+.sub{color:var(--muted);font-size:.95rem;margin:0;line-height:1.7}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+label{font-size:.8rem;letter-spacing:1px;color:var(--muted);font-weight:600}
+textarea{
+  width:100%;min-width:0;min-height:110px;resize:vertical;
+  background:var(--bg);color:var(--ink);border:1px solid var(--line);
+  border-radius:10px;padding:12px;font-family:var(--body);font-size:1.05rem;line-height:1.9;
+  font-variant-numeric:tabular-nums;
+}
+textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opt{display:flex;align-items:center;gap:8px;font-size:.92rem;color:var(--ink);cursor:pointer}
+.out{
+  background:var(--accent-soft);border:1px solid var(--line);border-radius:10px;
+  padding:14px;min-height:70px;font-size:1.15rem;line-height:2;white-space:pre-wrap;
+  word-break:break-word;font-variant-numeric:tabular-nums;
+}
+.ghost{color:var(--muted);font-size:1rem}
+.btn{
+  border:1px solid var(--line);background:var(--bg);color:var(--ink);
+  font-family:var(--body);font-weight:600;font-size:.9rem;
+  padding:9px 16px;border-radius:999px;cursor:pointer;
+}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.note{font-size:.85rem;color:var(--muted);line-height:1.8;margin:0}
+.keygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}
+.key{
+  background:var(--bg);border:1px solid var(--line);border-radius:9px;
+  padding:8px 4px;text-align:center;
+}
+.key b{display:block;font-family:var(--display);font-size:1.25rem;font-weight:700}
+.key span{display:block;font-size:.9rem;color:var(--accent);font-variant-numeric:tabular-nums;margin-top:2px}
+details summary{cursor:pointer;font-weight:600;font-size:.95rem}
+</style>
+<style>*{box-sizing:border-box}body{margin:0}img{max-width:100%}</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>شفرة الأرقام</h1>
+    <p class="sub">حطّ الأرقام اللي وصلتك فوق، ويطلع لك الكلام تحت على طول.</p>
+  </header>
+
+  <div class="card">
+    <label for="inp" id="inpLabel">الأرقام</label>
+    <textarea id="inp" placeholder="17-12 / 17-7-15-1-12-29"></textarea>
+
+    <div class="row">
+      <label class="opt"><input type="checkbox" id="rev"> اعكس الناتج</label>
+      <button class="btn" id="clear" type="button">مسح</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <label>النتيجة</label>
+      <button class="btn primary" id="copy" type="button">نسخ</button>
+    </div>
+    <div class="out" id="out"><span class="ghost">النتيجة تطلع هنا على طول</span></div>
+    <p class="note" id="warn"></p>
+  </div>
+
+  <details class="card">
+    <summary>مفتاح الشفرة</summary>
+    <div class="keygrid" id="keys"></div>
+    <p class="note">الألف بهمزة (أ إ آ) تنكتب 17 مثل الألف العادية. أما ة و ى و ء و ئ و ؤ فصار لكل وحدة رقم خاص فيها (من 29 إلى 33)، عشان الكلمة ترجع مضبوطة لما تحلها.</p>
+    <p class="note">الأرقام العادية داخل النص تنكتب بين قوسين مثل <b>[3]</b>، عشان ما تختلط مع أرقام الحروف.</p>
+  </details>
+</div>
+
+<script>
+var MAP = {"ا":17,"ب":4,"ت":22,"ث":9,"ج":26,"ح":1,"خ":13,"د":20,"ذ":6,"ر":11,"ز":28,
+"س":3,"ش":15,"ص":24,"ض":8,"ط":19,"ظ":2,"ع":27,"غ":10,"ف":5,"ق":23,"ك":14,"ل":7,
+"م":18,"ن":12,"ه":25,"و":16,"ي":21,"ة":29,"ى":30,"ء":31,"ئ":32,"ؤ":33};
+var ALIAS = {"أ":"ا","إ":"ا","آ":"ا"};
+var REV = {}; for (var k in MAP) REV[MAP[k]] = k;
+
+var inp = document.getElementById('inp');
+var out = document.getElementById('out');
+var warn = document.getElementById('warn');
+var rev = document.getElementById('rev');
+
+function normalizeDigits(s){
+  return s.replace(/[٠-٩]/g, function(d){ return String(d.charCodeAt(0) - 0x0660); });
+}
+function reverseText(s){ return Array.from(s).reverse().join(''); }
+
+function encode(text){
+  var skipped = {};
+  var words = text.trim().split(/\s+/).filter(Boolean);
+  var parts = words.map(function(w){
+    var codes = [];
+    Array.from(w).forEach(function(ch){
+      if (/[ً-ْٰ\[\]]/.test(ch)) return;    // تشكيل وأقواس الأرقام
+      var base = ALIAS[ch] || ch;
+      if (MAP[base] !== undefined) { codes.push(MAP[base]); }
+      else if (/[0-9]/.test(normalizeDigits(ch))) { codes.push('[' + normalizeDigits(ch) + ']'); }
+      else if (/\S/.test(ch)) { skipped[ch] = 1; codes.push(ch); }
+    });
+    return codes.join('-');
+  });
+  var keys = Object.keys(skipped);
+  warn.textContent = keys.length ? 'هذي الرموز ما لها رقم في المفتاح، تركتها مثل ما هي: ' + keys.join(' ') : '';
+  return parts.join(' / ');
+}
+
+function decode(text){
+  var bad = [];
+  var words = normalizeDigits(text).split(/[\/\n،]+/).map(function(s){return s.trim();}).filter(Boolean);
+  var res = words.map(function(w){
+    return w.split(/[-\s,]+/).filter(Boolean).map(function(tok){
+      var lit = tok.match(/^\[(\d)\]$/);
+      if (lit) return lit[1];
+      var n = parseInt(tok, 10);
+      if (REV[n] !== undefined) return REV[n];
+      bad.push(tok); return '؟';
+    }).join('');
+  });
+  warn.textContent = bad.length ? 'أرقام ما لها حرف في المفتاح: ' + bad.join('، ') : '';
+  return res.join(' ');
+}
+
+function run(){
+  var v = inp.value;
+  if (!v.trim()) { out.innerHTML = '<span class="ghost">النتيجة تطلع هنا على طول</span>'; warn.textContent = ''; return; }
+  var r = decode(v);
+  if (rev.checked) r = reverseText(r);
+  out.textContent = r;
+}
+
+inp.addEventListener('input', run);
+rev.addEventListener('change', run);
+document.getElementById('clear').addEventListener('click', function(){ inp.value=''; run(); inp.focus(); });
+document.getElementById('copy').addEventListener('click', function(){
+  var t = out.textContent;
+  var btn = this;
+  if (!t || out.querySelector('.ghost')) return;
+  try {
+    navigator.clipboard.writeText(t).then(function(){
+      btn.textContent = 'تم النسخ'; setTimeout(function(){ btn.textContent = 'نسخ'; }, 1500);
+    }).catch(select);
+  } catch(e){ select(); }
+  function select(){
+    var r = document.createRange(); r.selectNodeContents(out);
+    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+    btn.textContent = 'حدّد وانسخ'; setTimeout(function(){ btn.textContent = 'نسخ'; }, 2000);
+  }
+});
+
+var kg = document.getElementById('keys');
+Object.keys(MAP).forEach(function(ch){
+  var d = document.createElement('div');
+  d.className = 'key';
+  d.innerHTML = '<b></b><span></span>';
+  d.querySelector('b').textContent = ch;
+  d.querySelector('span').textContent = MAP[ch];
+  kg.appendChild(d);
+});
+
+inp.value = '18-11-1-4-17 / 4-14-18';
+run();
+</script>
+</body>
+</html>
